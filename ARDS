@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive ARDS Clinical Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Medical Harmony -->
+    <!-- Application Structure Plan: The application is structured as a clinical workflow dashboard, guiding the user from initial diagnosis to long-term prognosis. This non-linear structure, using a sticky navigation bar and thematic sections, is chosen over the report's original format to provide rapid, task-oriented access to information. Key interactions include an interactive diagnostic criteria checklist, a pathophysiology timeline, a tabbed management toolkit, and data visualizations for etiology and outcomes. This design prioritizes clinical usability and quick reference, allowing practitioners to find relevant information based on their immediate needs rather than reading a linear document. -->
+    <!-- Visualization & Content Choices:
+        - Berlin Criteria (Table): Goal: Inform/Organize -> Method: Interactive Accordion (HTML/JS) -> Interaction: Click to expand/collapse criteria details -> Justification: Cleaner and more engaging than a static table, focuses user attention.
+        - ARDS Etiology (Donut Chart): Goal: Show Proportions -> Method: Chart.js Donut Chart -> Interaction: Hover for tooltips with percentages -> Justification: Quickly conveys the most common causes of ARDS.
+        - Pathophysiology Phases (Timeline): Goal: Show Process -> Method: Interactive Stepper (HTML/CSS/JS) -> Interaction: Click on a phase to view its detailed description -> Justification: Visualizes the temporal progression of the disease in a clear, digestible format.
+        - PICS Prevalence (Bar Chart): Goal: Compare -> Method: Chart.js Bar Chart -> Interaction: Hover for exact prevalence percentages -> Justification: Effectively compares the long-term impact across physical, cognitive, and mental health domains.
+        - Management Toolkit (Tabs): Goal: Organize -> Method: Tabbed Interface (HTML/JS) -> Interaction: Click tabs to switch between management pillars -> Justification: Organizes a large volume of complex treatment information into logical, manageable sections.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F7F4;
+            color: #3D405B;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+                max-height: 400px;
+            }
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #3A86FF;
+            border-bottom-color: #3A86FF;
+        }
+        .tab-btn.active {
+            background-color: #3A86FF;
+            color: #FFFFFF;
+        }
+        .phase.active .phase-circle {
+            background-color: #3A86FF;
+            border-color: #3A86FF;
+            color: #FFFFFF;
+        }
+        .phase.active .phase-title {
+            color: #3A86FF;
+            font-weight: 600;
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0">
+                    <h1 class="text-xl font-bold text-[#3D405B]">ARDS Clinical Dashboard</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#diagnosis" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Diagnosis</a>
+                        <a href="#pathophysiology" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Pathophysiology</a>
+                        <a href="#management" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Management</a>
+                        <a href="#prognosis" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Prognosis</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+
+        <section id="introduction" class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">Acute Respiratory Distress Syndrome</h2>
+            <p class="max-w-3xl mx-auto text-lg text-gray-600">An interactive guide to the diagnosis, pathophysiology, management, and prognosis of ARDS, based on current evidence and clinical guidelines. This tool is designed to support critical care professionals in understanding and treating this complex syndrome.</p>
+        </section>
+
+        <div id="diagnosis" class="mb-16 scroll-mt-20">
+            <h3 class="text-2xl font-bold text-center mb-2">Diagnosis & Severity</h3>
+            <p class="text-center text-gray-600 max-w-2xl mx-auto mb-8">ARDS diagnosis is based on the 2012 Berlin Definition, which requires four key criteria. This section provides an interactive way to explore these criteria and understand the severity classification based on oxygenation.</p>
+            <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="p-6 md:p-8">
+                    <h4 class="text-xl font-semibold mb-4">The Berlin Definition: Interactive Criteria</h4>
+                    <div id="accordion-container" class="space-y-2">
+                        <div class="accordion-item border rounded-lg">
+                            <button class="accordion-header w-full text-left p-4 font-medium flex justify-between items-center transition duration-300 ease-in-out bg-gray-50 hover:bg-gray-100">
+                                <span>1. Timing</span>
+                                <span class="accordion-icon text-xl transform transition-transform duration-300">+</span>
+                            </button>
+                            <div class="accordion-content">
+                                <p class="p-4 border-t text-gray-700">Acute onset within 1 week of a known clinical insult or new/worsening respiratory symptoms. This criterion helps distinguish ARDS from more chronic pulmonary conditions.</p>
+                            </div>
+                        </div>
+                        <div class="accordion-item border rounded-lg">
+                            <button class="accordion-header w-full text-left p-4 font-medium flex justify-between items-center transition duration-300 ease-in-out bg-gray-50 hover:bg-gray-100">
+                                <span>2. Chest Imaging</span>
+                                <span class="accordion-icon text-xl transform transition-transform duration-300">+</span>
+                            </button>
+                            <div class="accordion-content">
+                                <p class="p-4 border-t text-gray-700">Bilateral opacities on chest radiograph or CT scan, not fully explained by effusions, lobar/lung collapse, or nodules. These opacities are consistent with pulmonary edema.</p>
+                            </div>
+                        </div>
+                        <div class="accordion-item border rounded-lg">
+                            <button class="accordion-header w-full text-left p-4 font-medium flex justify-between items-center transition duration-300 ease-in-out bg-gray-50 hover:bg-gray-100">
+                                <span>3. Origin of Edema</span>
+                                <span class="accordion-icon text-xl transform transition-transform duration-300">+</span>
+                            </button>
+                            <div class="accordion-content">
+                                <p class="p-4 border-t text-gray-700">Respiratory failure not fully explained by cardiac failure or fluid overload. An objective assessment (e.g., echocardiogram) is needed to exclude hydrostatic edema if no risk factor is present.</p>
+                            </div>
+                        </div>
+                        <div class="accordion-item border rounded-lg">
+                            <button class="accordion-header w-full text-left p-4 font-medium flex justify-between items-center transition duration-300 ease-in-out bg-gray-50 hover:bg-gray-100">
+                                <span>4. Oxygenation (Severity)</span>
+                                <span class="accordion-icon text-xl transform transition-transform duration-300">+</span>
+                            </button>
+                            <div class="accordion-content">
+                                <div class="p-4 border-t text-gray-700">
+                                    <p class="mb-2">Impaired oxygenation is measured by the PaO₂/FiO₂ ratio on a minimum PEEP of ≥ 5 cmH₂O. This ratio determines the severity:</p>
+                                    <ul class="list-disc list-inside space-y-1">
+                                        <li><span class="font-semibold">Mild:</span> 200 mmHg &lt; PaO₂/FiO₂ ≤ 300 mmHg</li>
+                                        <li><span class="font-semibold">Moderate:</span> 100 mmHg &lt; PaO₂/FiO₂ ≤ 200 mmHg</li>
+                                        <li><span class="font-semibold">Severe:</span> PaO₂/FiO₂ ≤ 100 mmHg</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="pathophysiology" class="mb-16 scroll-mt-20">
+            <h3 class="text-2xl font-bold text-center mb-2">Etiology & Pathophysiology</h3>
+            <p class="text-center text-gray-600 max-w-2xl mx-auto mb-8">ARDS is triggered by various direct or indirect lung injuries, leading to a complex inflammatory cascade. This section visualizes the common causes and the progression of the disease through its distinct phases.</p>
+            <div class="grid md:grid-cols-2 gap-8 items-start">
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h4 class="text-xl font-semibold mb-4 text-center">Common Causes of ARDS</h4>
+                    <p class="text-center text-sm text-gray-500 mb-4">Sepsis is the single most predominant cause. Hover over the chart for details.</p>
+                    <div class="chart-container">
+                        <canvas id="etiologyChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h4 class="text-xl font-semibold mb-4 text-center">The Three Phases of ARDS</h4>
+                     <p class="text-center text-sm text-gray-500 mb-6">Click on each phase to learn about its key characteristics.</p>
+                    <div id="phase-container" class="relative">
+                        <div class="absolute left-4 top-4 bottom-4 w-0.5 bg-gray-200"></div>
+                        <div class="space-y-8">
+                            <div class="phase pl-10 cursor-pointer active" data-phase="exudative">
+                                <div class="absolute left-0 top-0 flex items-center justify-center w-8 h-8 rounded-full bg-white border-2 border-gray-200 phase-circle">1</div>
+                                <h5 class="font-medium phase-title">Exudative Phase (Days 1-7)</h5>
+                            </div>
+                            <div class="phase pl-10 cursor-pointer" data-phase="proliferative">
+                                <div class="absolute left-0 top-0 flex items-center justify-center w-8 h-8 rounded-full bg-white border-2 border-gray-200 phase-circle">2</div>
+                                <h5 class="font-medium phase-title">Proliferative Phase (Days 7-21)</h5>
+                            </div>
+                             <div class="phase pl-10 cursor-pointer" data-phase="fibrotic">
+                                <div class="absolute left-0 top-0 flex items-center justify-center w-8 h-8 rounded-full bg-white border-2 border-gray-200 phase-circle">3</div>
+                                <h5 class="font-medium phase-title">Fibrotic Phase (&gt;21 Days)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="phase-description" class="mt-6 p-4 bg-blue-50 rounded-lg text-gray-700 min-h-[150px]">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="management" class="mb-16 scroll-mt-20">
+            <h3 class="text-2xl font-bold text-center mb-2">Management Toolkit</h3>
+            <p class="text-center text-gray-600 max-w-2xl mx-auto mb-8">ARDS management is primarily supportive, focusing on lung-protective ventilation and evidence-based adjunctive therapies. Use the tabs below to navigate the core components of ARDS care.</p>
+            <div class="max-w-4xl mx-auto">
+                <div class="mb-4 flex justify-center border-b border-gray-200">
+                    <button class="tab-btn py-2 px-4 font-medium text-gray-500 hover:text-blue-600 active" data-tab="ventilation">Ventilation Strategy</button>
+                    <button class="tab-btn py-2 px-4 font-medium text-gray-500 hover:text-blue-600" data-tab="adjunctive">Adjunctive Therapies</button>
+                    <button class="tab-btn py-2 px-4 font-medium text-gray-500 hover:text-blue-600" data-tab="supportive">Supportive Care</button>
+                </div>
+                <div id="tab-content-container">
+                    <div class="tab-content active" id="ventilation">
+                        <div class="bg-white p-6 rounded-xl shadow-md grid md:grid-cols-2 gap-6">
+                            <div>
+                                <h4 class="font-semibold text-lg mb-2">Low Tidal Volume Ventilation</h4>
+                                <p class="text-gray-600">The cornerstone of ARDS care. Aims to prevent ventilator-induced lung injury (VILI) by avoiding overdistension of the "baby lung."</p>
+                                <ul class="mt-2 list-disc list-inside text-gray-700">
+                                    <li><span class="font-semibold">Tidal Volume:</span> 4-8 mL/kg predicted body weight.</li>
+                                    <li><span class="font-semibold">Key Evidence:</span> ARDSNet trial showed a significant mortality reduction with 6 mL/kg vs 12 mL/kg.</li>
+                                </ul>
+                            </div>
+                             <div>
+                                <h4 class="font-semibold text-lg mb-2">Pressure Limitation & PEEP</h4>
+                                <p class="text-gray-600">Essential for preventing barotrauma and atelectrauma (injury from repetitive alveolar collapse and reopening).</p>
+                                <ul class="mt-2 list-disc list-inside text-gray-700">
+                                    <li><span class="font-semibold">Plateau Pressure:</span> Goal is &lt; 30 cmH₂O.</li>
+                                    <li><span class="font-semibold">PEEP:</span> Optimized to maintain alveolar recruitment while avoiding overdistension and hemodynamic compromise. Often guided by ARDSNet PEEP/FiO₂ tables.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-content hidden" id="adjunctive">
+                         <div class="bg-white p-6 rounded-xl shadow-md grid sm:grid-cols-2 lg:grid-cols-2 gap-6">
+                            <div class="p-4 border rounded-lg">
+                                <h4 class="font-semibold text-lg mb-2">Prone Positioning</h4>
+                                <p class="text-gray-600 text-sm">Strongly recommended for severe ARDS (PaO₂/FiO₂ ≤ 100). Improves V/Q matching and reduces VILI. PROSEVA trial showed a significant mortality benefit when used for >12 hours/day.</p>
+                            </div>
+                            <div class="p-4 border rounded-lg">
+                                <h4 class="font-semibold text-lg mb-2">Neuromuscular Blockers</h4>
+                                <p class="text-gray-600 text-sm">Conditional recommendation for early, severe ARDS (PaO₂/FiO₂ &lt; 150) to improve patient-ventilator synchrony. Evidence is mixed (ACURASYS vs. ROSE trials).</p>
+                            </div>
+                            <div class="p-4 border rounded-lg">
+                                <h4 class="font-semibold text-lg mb-2">Corticosteroids</h4>
+                                <p class="text-gray-600 text-sm">Recent guidelines suggest use to mitigate the inflammatory response. Patient selection and timing are critical. Not a routine therapy for all ARDS patients.</p>
+                            </div>
+                            <div class="p-4 border rounded-lg">
+                                <h4 class="font-semibold text-lg mb-2">ECMO</h4>
+                                <p class="text-gray-600 text-sm">A salvage therapy for refractory severe ARDS when conventional ventilation fails. Considered for patients with PaO₂/FiO₂ &lt; 80 despite optimization.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-content hidden" id="supportive">
+                        <div class="bg-white p-6 rounded-xl shadow-md grid md:grid-cols-2 gap-6">
+                            <div>
+                                <h4 class="font-semibold text-lg mb-2">Conservative Fluid Management</h4>
+                                <p class="text-gray-600">After initial resuscitation, a conservative fluid strategy is recommended. The FACTT trial showed this approach leads to more ventilator-free days and shorter ICU stays without increasing non-pulmonary organ failure.</p>
+                            </div>
+                             <div>
+                                <h4 class="font-semibold text-lg mb-2">Nutritional Support</h4>
+                                <p class="text-gray-600">Early enteral nutrition (within 24-48 hours) is crucial. Aim for 25-30 kcal/kg/day and higher protein intake (1.2-2.0 g/kg/day) to combat catabolism and support tissue repair.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="prognosis" class="scroll-mt-20">
+            <h3 class="text-2xl font-bold text-center mb-2">Prognosis & Life After ARDS</h3>
+            <p class="text-center text-gray-600 max-w-2xl mx-auto mb-8">While mortality remains high, many patients survive ARDS. However, survivorship is often complicated by Post-Intensive Care Syndrome (PICS), a collection of long-term physical, cognitive, and mental health impairments.</p>
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                    <h4 class="text-xl font-semibold mb-2">Mortality Rate</h4>
+                    <p class="text-5xl font-bold text-[#E76F51]">25-46%</p>
+                    <p class="text-gray-600 mt-2">Mortality varies based on severity, underlying etiology (sepsis-induced is worse), and patient comorbidities.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h4 class="text-xl font-semibold mb-4 text-center">Prevalence of PICS in Survivors</h4>
+                     <p class="text-center text-sm text-gray-500 mb-4">Hover over the bars to see the prevalence of major impairments.</p>
+                    <div class="chart-container" style="max-width: 100%;">
+                        <canvas id="picsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-white mt-16 border-t">
+        <div class="container mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-gray-500">
+            <p>&copy; 2024 ARDS Clinical Dashboard. For educational purposes only.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            const chartLabelColor = '#3D405B';
+            const chartGridColor = 'rgba(0, 0, 0, 0.05)';
+
+            const wrapText = (ctx, text, x, y, maxWidth, lineHeight) => {
+                const words = text.split(' ');
+                let line = '';
+                for (let n = 0; n < words.length; n++) {
+                    const testLine = line + words[n] + ' ';
+                    const metrics = ctx.measureText(testLine);
+                    const testWidth = metrics.width;
+                    if (testWidth > maxWidth && n > 0) {
+                        ctx.fillText(line, x, y);
+                        line = words[n] + ' ';
+                        y += lineHeight;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                ctx.fillText(line, x, y);
+            };
+
+            Chart.Tooltip.positioners.custom = function(items) {
+                if (!items.length) {
+                    return false;
+                }
+                const pos = this.getAveragePosition(items);
+                return {
+                    x: pos.x,
+                    y: pos.y,
+                };
+            };
+
+            const etiologyCtx = document.getElementById('etiologyChart')?.getContext('2d');
+            if (etiologyCtx) {
+                new Chart(etiologyCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Sepsis', 'Pneumonia', 'Aspiration', 'Trauma', 'Other'],
+                        datasets: [{
+                            label: 'ARDS Causes',
+                            data: [32, 23, 15, 10, 20],
+                            backgroundColor: ['#E76F51', '#F4A261', '#E9C46A', '#2A9D8F', '#264653'],
+                            borderColor: '#F8F7F4',
+                            borderWidth: 4,
+                            hoverOffset: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: chartLabelColor,
+                                    font: { family: "'Inter', sans-serif" }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.label}: ${context.raw}%`;
+                                    }
+                                },
+                                bodyFont: { family: "'Inter', sans-serif", size: 14 },
+                                titleFont: { family: "'Inter', sans-serif", size: 16 },
+                            }
+                        }
+                    }
+                });
+            }
+
+            const picsCtx = document.getElementById('picsChart')?.getContext('2d');
+            if (picsCtx) {
+                new Chart(picsCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Physical Impairment', 'Cognitive Impairment', 'Mental Health Issues'],
+                        datasets: [{
+                            label: 'Prevalence in Survivors (%)',
+                            data: [50, 71, 44],
+                            backgroundColor: ['#2A9D8F', '#E9C46A', '#F4A261'],
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                max: 100,
+                                grid: { color: chartGridColor },
+                                ticks: { color: chartLabelColor, font: { family: "'Inter', sans-serif" } }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: { color: chartLabelColor, font: { family: "'Inter', sans-serif", size: 14 } }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.x !== null) {
+                                            label += context.parsed.x + '%';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            const accordionItems = document.querySelectorAll('.accordion-item');
+            accordionItems.forEach(item => {
+                const header = item.querySelector('.accordion-header');
+                const content = item.querySelector('.accordion-content');
+                const icon = item.querySelector('.accordion-icon');
+                header.addEventListener('click', () => {
+                    const isOpen = content.style.maxHeight;
+                    if (isOpen) {
+                        content.style.maxHeight = null;
+                        icon.classList.remove('rotate-45');
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        icon.classList.add('rotate-45');
+                    }
+                });
+            });
+
+            const phaseData = {
+                exudative: 'Characterized by diffuse alveolar damage. An influx of inflammatory cells and protein-rich fluid into the alveoli leads to non-cardiogenic pulmonary edema, formation of hyaline membranes, and severe impairment of gas exchange.',
+                proliferative: 'The body attempts to repair the damage. Type II pneumocytes proliferate to replace damaged cells, and fibroblasts migrate into the alveolar space, beginning the process of laying down collagen.',
+                fibrotic: 'In some patients, the repair process becomes dysregulated, leading to extensive collagen deposition and pulmonary fibrosis. This remodels the lung architecture, causing long-term respiratory impairment.'
+            };
+            const phases = document.querySelectorAll('.phase');
+            const phaseDescription = document.getElementById('phase-description');
+
+            const updatePhase = (activePhase) => {
+                phases.forEach(p => p.classList.remove('active'));
+                activePhase.classList.add('active');
+                phaseDescription.textContent = phaseData[activePhase.dataset.phase];
+            };
+
+            phases.forEach(phase => {
+                phase.addEventListener('click', () => updatePhase(phase));
+            });
+            updatePhase(document.querySelector('.phase.active'));
+
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const tabId = btn.dataset.tab;
+                    tabContents.forEach(content => {
+                        if (content.id === tabId) {
+                            content.classList.remove('hidden');
+                            content.classList.add('active');
+                        } else {
+                            content.classList.add('hidden');
+                            content.classList.remove('active');
+                        }
+                    });
+                });
+            });
+
+            const navLinks = document.querySelectorAll('a.nav-link');
+            const sections = document.querySelectorAll('div[id]');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.toggle('active', link.getAttribute('href').substring(1) === entry.target.id);
+                        });
+                    }
+                });
+            }, { rootMargin: "-50% 0px -50% 0px" });
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+        });
+    </script>
+</body>
+</html>
